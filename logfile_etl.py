@@ -9,6 +9,7 @@ import argparse
 import paramiko
 from db_utils import AccessLogDB
 from utils import load_env
+from filters import IGNORED_PATH_PREFIXES
 
 load_env()
 
@@ -242,17 +243,7 @@ def is_bot(user_agent):
 
 def is_admin_tech(path):
     """True, wenn der Pfad zu administrativen WordPress-Bereichen gehört."""
-    admin_patterns = (
-        "/wp-admin",
-        "/wp-login.php",
-        "/wp-json",
-        "/wp-content",
-        "/xmlrpc.php",
-        "/wp-cron.php",
-        "/wp-includes",
-        "/robots.txt",
-    )
-    return path.startswith(admin_patterns)
+    return path.startswith(IGNORED_PATH_PREFIXES)
 
 
 def extract_utm(referrer):

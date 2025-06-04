@@ -4,6 +4,7 @@ import gzip
 import shutil
 from datetime import datetime
 from urllib.parse import urlparse, parse_qs
+import argparse
 
 import paramiko
 from db_utils import AccessLogDB
@@ -33,6 +34,23 @@ def get_config():
 
 
 CONFIG = get_config()
+
+
+def parse_args():
+    """Parse command line arguments for optional configuration overrides."""
+    parser = argparse.ArgumentParser(description="Download and import log files")
+    parser.add_argument(
+        "--force-reload",
+        dest="force_reload",
+        action=argparse.BooleanOptionalAction,
+        help="Override FORCE_RELOAD from .env",
+    )
+    parser.add_argument(
+        "--mode",
+        choices=["bulk", "daily"],
+        help="Override MODE from .env",
+    )
+    return parser.parse_args()
 
 # Vorab kompilierte Pattern für Logzeilen und Bot-Erkennung
 LOG_PATTERN = re.compile(
@@ -316,4 +334,11 @@ def main(config=CONFIG):
 
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    config = CONFIG.copy()
+    if args.force_reload is not None:
+        config["force_reload"] = args.force_reload
+    if args.mode:
+        config["mode"] = args.mode
+    main(config)
+

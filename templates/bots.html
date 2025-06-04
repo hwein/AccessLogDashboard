@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mb-4">
+  <h4>Bot-Traffic im Zeitverlauf</h4>
+  {{ bots_chart|safe }}
+</div>
+<div class="row">
+  <div class="col-md-6">
+    <h4>Häufigste Bots (User-Agent)</h4>
+    <table class="table table-sm table-striped">
+      <thead><tr><th>Bot (User-Agent)</th><th>Hits</th></tr></thead>
+      <tbody>
+        {% for row in bot_counts %}
+          <tr>
+            <td>{{ row.user_agent }}</td>
+            <td>{{ row.hits }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="col-md-6">
+    <h4>Von Bots meist besuchte Seiten</h4>
+    <table class="table table-sm table-striped">
+      <thead><tr><th>Seite</th><th>Hits</th></tr></thead>
+      <tbody>
+        {% for row in bot_pages %}
+          <tr>
+            <td>{{ row.path }}</td>
+            <td>{{ row.hits }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

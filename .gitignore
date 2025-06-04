@@ -1,0 +1,4 @@
+/geo/
+/logs/
+/.env
+/accesslog.db

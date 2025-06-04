@@ -34,8 +34,15 @@ python logfile_etl.py [--force-reload] [--no-force-reload] [--mode bulk|daily]
 
 Dies lädt die Logfiles vom im `.env` definierten Server, parst sie und
 schreibt neue Einträge in die SQLite-Datenbank. Mit den optionalen
-Parametern `--force-reload`/`--no-force-reload` und `--mode` können die
+Parametern `--force-reload`/`--no-force-reload` sowie `--mode` können die
 entsprechenden Werte aus der `.env` überschrieben werden.
+
+Beispielaufruf, um den Modus auf `bulk` zu setzen und `force_reload`
+auf `false` zu stellen:
+
+```bash
+python logfile_etl.py --mode bulk --no-force-reload
+```
 
 ### Dashboard starten
 

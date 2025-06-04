@@ -22,7 +22,7 @@ def test_is_admin_tech():
 def test_process_logfile(monkeypatch, tmp_path):
     log_path = tmp_path / "access.log"
     log_lines = [
-        "127.0.0.1 - - [01/Jan/2021:10:00:00 +0000] \"GET /blog/page.html?utm_source=google&utm_medium=ad&utm_campaign=test HTTP/1.1\" 200 1000 example.com \"http://example.com/\" \"Mozilla/5.0\" \"-\"",
+        "127.0.0.1 - - [01/Jan/2021:10:00:00 +0000] \"GET /blog/page.html HTTP/1.1\" 200 1000 example.com \"http://example.com/?utm_source=google&utm_medium=ad&utm_campaign=test\" \"Mozilla/5.0\" \"-\"",
         "127.0.0.2 - - [01/Jan/2021:11:00:00 +0000] \"GET /wp-admin/admin.php HTTP/1.1\" 404 0 example.com \"-\" \"BotAgent\" \"-\"",
     ]
     log_path.write_text("\n".join(log_lines))

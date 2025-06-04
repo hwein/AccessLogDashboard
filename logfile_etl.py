@@ -2,12 +2,11 @@ import os
 import re
 import gzip
 import shutil
-import sqlite3
 from datetime import datetime
 from urllib.parse import urlparse, parse_qs
 
-import pandas as pd
 import paramiko
+from db_utils import AccessLogDB
 
 def load_env(path=".env"):
     """Load key=value pairs from a .env file into os.environ"""
@@ -214,35 +213,6 @@ def sftp_download_logs(config):
     return [os.path.join(local_dir, f) for f in all_files]
 
 # --- Duplikat-Erkennung & DB-Initialisierung ---
-def init_db(config, force_reload=False):
-    con = sqlite3.connect(config['db_file'])
-    c = con.cursor()
-    if force_reload:
-        log("WARNUNG: Tabelle access_log wird komplett gelöscht!")
-        c.execute('DROP TABLE IF EXISTS access_log')
-    c.execute('''
-    CREATE TABLE IF NOT EXISTS access_log (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp TEXT,
-        ip TEXT,
-        method TEXT,
-        path TEXT,
-        query TEXT,
-        status INTEGER,
-        size TEXT,
-        referrer TEXT,
-        user_agent TEXT,
-        is_bot BOOLEAN,
-        is_admin_tech BOOLEAN,
-        is_content BOOLEAN,
-        utm_source TEXT,
-        utm_medium TEXT,
-        utm_campaign TEXT,
-        UNIQUE(timestamp, ip, method, path, query, user_agent)
-    )
-    ''')
-    con.commit()
-    return con
 
 def is_bot(user_agent):
     """Prüft, ob der User-Agent auf einen Bot hinweist."""
@@ -306,28 +276,20 @@ def process_logfile(filepath):
 
 def main(config=CONFIG):
     files = sftp_download_logs(config)
-    con = init_db(config, config['force_reload'])
-    c = con.cursor()
-    insert_sql = '''
-    INSERT OR IGNORE INTO access_log (
-        timestamp, ip, method, path, query, status, size, referrer, user_agent,
-        is_bot, is_admin_tech, is_content, utm_source, utm_medium, utm_campaign
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    '''
     total_imported = 0
-    for f in files:
-        log(f"Verarbeite: {f}")
-        data = process_logfile(f)
-        before = c.execute("SELECT COUNT(*) FROM access_log").fetchone()[0]
-        c.executemany(insert_sql, data)
-        con.commit()
-        after = c.execute("SELECT COUNT(*) FROM access_log").fetchone()[0]
-        imported = after - before
-        skipped = len(data) - imported
-        log(f"{imported} neue Zeilen aus {f} importiert.")
-        log(f"{skipped} Zeilen aus {f} waren Duplikate und wurden übersprungen.")
-        total_imported += imported
-    log(f"Import abgeschlossen. Insgesamt {total_imported} Zeilen verarbeitet (nur neue gespeichert).")
+    with AccessLogDB(config['db_file']) as db:
+        db.init_db(config['force_reload'])
+        for f in files:
+            log(f"Verarbeite: {f}")
+            data = process_logfile(f)
+            imported = db.insert_logs(data)
+            skipped = len(data) - imported
+            log(f"{imported} neue Zeilen aus {f} importiert.")
+            log(f"{skipped} Zeilen aus {f} waren Duplikate und wurden übersprungen.")
+            total_imported += imported
+    log(
+        f"Import abgeschlossen. Insgesamt {total_imported} Zeilen verarbeitet (nur neue gespeichert)."
+    )
 
 if __name__ == "__main__":
     main()

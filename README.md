@@ -60,6 +60,6 @@ Das Dashboard ist danach unter <http://localhost:5000/> erreichbar.
 - `templates/` – HTML-Vorlagen für die Darstellung
 - `logs/` – Lokales Verzeichnis für heruntergeladene Access-Logs
 - `geo/` – Lokales Verzeichnis für MaxMind-Geodaten
-- `db_utils.py`, `filters.py`, `geo_utils.py`, `utils.py` – Hilfsfunktionen
+- `db_utils.py`, `bots_utils.py`, `filters.py`, `geo_utils.py`, `utils.py` – Hilfsfunktionen
 
 Viel Spaß beim Analysieren!

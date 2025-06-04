@@ -7,7 +7,7 @@ und anschließend über ein Flask-Dashboard ausgewertet.
 ## Funktionen
 
 - Import von Access-Logs mittels `logfile_etl.py`
-- Speicherung der Daten in `accesslog.db`
+- Speicherung der Daten in einer SQLite-Datenbank (Datei via `DB_FILE` definierbar)
 - Web-Dashboard (`analytics_dashboard.py`) mit Übersichten zu Fehlern,
   Bots, Inhaltsaufrufen und UTM-Parametern
 - Datumsfilter und einfache Diagramme mit Plotly
@@ -20,7 +20,7 @@ und anschließend über ein Flask-Dashboard ausgewertet.
    ```bash
    pip install pandas flask paramiko geoip2 plotly
    ```
-3. `.env.example` nach `.env` kopieren und die SFTP-Zugangsdaten anpassen.
+3. `.env.example` nach `.env` kopieren und die SFTP-Zugangsdaten sowie `DB_FILE` anpassen.
 4. Die GeoLite2 City-Datenbank von [MaxMind](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data)
    herunterladen und unter `geo/GeoLite2-City.mmdb` ablegen.
 

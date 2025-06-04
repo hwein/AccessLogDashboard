@@ -29,11 +29,13 @@ und anschließend über ein Flask-Dashboard ausgewertet.
 ### Logfiles importieren
 
 ```
-python logfile_etl.py
+python logfile_etl.py [--force-reload] [--no-force-reload] [--mode bulk|daily]
 ```
 
 Dies lädt die Logfiles vom im `.env` definierten Server, parst sie und
-schreibt neue Einträge in die SQLite-Datenbank.
+schreibt neue Einträge in die SQLite-Datenbank. Mit den optionalen
+Parametern `--force-reload`/`--no-force-reload` und `--mode` können die
+entsprechenden Werte aus der `.env` überschrieben werden.
 
 ### Dashboard starten
 

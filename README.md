@@ -48,6 +48,8 @@ Das Dashboard ist danach unter <http://localhost:5000/> erreichbar.
 - `logfile_etl.py` – Download und Import der Logfiles
 - `analytics_dashboard.py` – Startet das Flask-Dashboard
 - `templates/` – HTML-Vorlagen für die Darstellung
+- `logs/` – Lokales Verzeichnis für heruntergeladene Access-Logs
+- `geo/` – Lokales Verzeichnis für MaxMind-Geodaten
 - `db_utils.py`, `filters.py`, `geo_utils.py`, `utils.py` – Hilfsfunktionen
 
 Viel Spaß beim Analysieren!

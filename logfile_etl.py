@@ -2,6 +2,7 @@ import os
 import re
 import gzip
 import shutil
+from dataclasses import dataclass, replace
 from datetime import datetime
 from urllib.parse import urlparse, parse_qs
 import argparse
@@ -18,27 +19,46 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger(__name__)
 
 
-def get_config():
+@dataclass
+class SFTPConfig:
+    host: str
+    port: int
+    user: str
+    password: str
+
+
+@dataclass
+class ETLConfig:
+    sftp: SFTPConfig
+    local_dir: str
+    mode: str
+    force_reload: bool
+    db_file: str
+    logfile_pattern: str
+
+
+def get_config() -> ETLConfig:
     """Return configuration loaded from environment variables."""
-    return {
-        "sftp": {
-            "host": os.environ.get("SFTP_HOST", "xxxxxx"),
-            "port": int(os.environ.get("SFTP_PORT", 22)),
-            "user": os.environ.get("SFTP_USER", "xxxxxx"),
-            "password": os.environ.get("SFTP_PASSWORD", "xxxxxx"),
-        },
-        "local_dir": os.environ.get("LOCAL_DIR", "./logs"),
-        "mode": os.environ.get("MODE", "bulk"),
-        "force_reload": os.environ.get("FORCE_RELOAD", "False").lower()
+    sftp = SFTPConfig(
+        host=os.environ.get("SFTP_HOST", "xxxxxx"),
+        port=int(os.environ.get("SFTP_PORT", 22)),
+        user=os.environ.get("SFTP_USER", "xxxxxx"),
+        password=os.environ.get("SFTP_PASSWORD", "xxxxxx"),
+    )
+    return ETLConfig(
+        sftp=sftp,
+        local_dir=os.environ.get("LOCAL_DIR", "./logs"),
+        mode=os.environ.get("MODE", "bulk"),
+        force_reload=os.environ.get("FORCE_RELOAD", "False").lower()
         == "true",
-        "db_file": os.environ.get("DB_FILE", "accesslog.db"),
-        "logfile_pattern": os.environ.get(
+        db_file=os.environ.get("DB_FILE", "accesslog.db"),
+        logfile_pattern=os.environ.get(
             "LOGFILE_PATTERN", r"access\.log\.\d+(\.\d+)?(\.gz)?$"
         ),
-    }
+    )
 
 
-CONFIG = get_config()
+CONFIG: ETLConfig = get_config()
 
 
 def parse_args():
@@ -158,18 +178,16 @@ def clear_local_dir(local_dir):
 
 
 # --- SFTP Download Funktion ---
-def sftp_download_logs(config):
-    sftp_cfg = config["sftp"]
-    local_dir = config["local_dir"]
-    logfile_pattern = re.compile(config["logfile_pattern"])
+def sftp_download_logs(config: ETLConfig):
+    sftp_cfg = config.sftp
+    local_dir = config.local_dir
+    logfile_pattern = re.compile(config.logfile_pattern)
     os.makedirs(local_dir, exist_ok=True)
     clear_local_dir(local_dir)
     logger.info("Verbinde mit SFTP-Server ...")
-    client = paramiko.Transport((sftp_cfg["host"], sftp_cfg["port"]))
+    client = paramiko.Transport((sftp_cfg.host, sftp_cfg.port))
     try:
-        client.connect(
-            username=sftp_cfg["user"], password=sftp_cfg["password"]
-        )
+        client.connect(username=sftp_cfg.user, password=sftp_cfg.password)
         sftp = paramiko.SFTPClient.from_transport(client)
         files = sftp.listdir(".")
         logger.info(f"Gefundene Dateien auf SFTP: {files}")
@@ -182,7 +200,7 @@ def sftp_download_logs(config):
             and f not in {"traffic.db", "sftp.log", "access.log.current"}
         ]
         logger.info(f"Logfiles nach Pattern-Match: {logfiles}")
-        if config["mode"] == "daily":
+        if config.mode == "daily":
             mtimes = [(f, sftp.stat(f).st_mtime) for f in logfiles]
             if mtimes:
                 mtimes.sort(key=lambda x: x[1], reverse=True)
@@ -300,11 +318,11 @@ def process_logfile(filepath):
     return records
 
 
-def main(config=CONFIG):
+def main(config: ETLConfig = CONFIG):
     files = sftp_download_logs(config)
     total_imported = 0
-    with AccessLogDB(config["db_file"]) as db:
-        db.init_db(config["force_reload"])
+    with AccessLogDB(config.db_file) as db:
+        db.init_db(config.force_reload)
         for f in files:
             logger.info(f"Verarbeite: {f}")
             data = process_logfile(f)
@@ -322,10 +340,10 @@ def main(config=CONFIG):
 
 if __name__ == "__main__":
     args = parse_args()
-    config = CONFIG.copy()
+    config = replace(CONFIG)
     if args.force_reload is not None:
-        config["force_reload"] = args.force_reload
+        config.force_reload = args.force_reload
     if args.mode:
-        config["mode"] = args.mode
+        config.mode = args.mode
     main(config)
 

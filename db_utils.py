@@ -60,13 +60,6 @@ class AccessLogDB:
         """Lädt sämtliche Zeilen der Tabelle ``access_log`` als DataFrame."""
         return AccessLogDB.get_DataFrame("SELECT * FROM access_log", db_file=db_file)
 
-    @staticmethod
-    def execute(query: str, params=None, db_file: str = DB_FILE) -> None:
-        """Führt eine Änderungsabfrage (INSERT/UPDATE/DELETE) aus."""
-        with sqlite3.connect(db_file) as con:
-            cur = con.cursor()
-            cur.execute(query, params or ())
-            con.commit()
 
     def __init__(self, db_file: str = DB_FILE):
         self.db_file = db_file

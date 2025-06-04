@@ -13,26 +13,6 @@ load_env()
 DB_FILE = os.environ.get("DB_FILE", "accesslog.db")
 
 
-def get_df(query: str, params=None, db_file: str = DB_FILE) -> pd.DataFrame:
-    """Lädt eine Abfrage als DataFrame aus der Datenbank."""
-    with sqlite3.connect(db_file) as con:
-        df = pd.read_sql_query(query, con, params=params)
-    return df
-
-
-def load_access_logs() -> pd.DataFrame:
-    """Lädt sämtliche Zeilen der Tabelle ``access_log`` als DataFrame."""
-    return get_df("SELECT * FROM access_log")
-
-
-def execute(query: str, params=None, db_file: str = DB_FILE) -> None:
-    """Führt eine Änderungsabfrage (INSERT/UPDATE/DELETE) aus."""
-    with sqlite3.connect(db_file) as con:
-        cur = con.cursor()
-        cur.execute(query, params or ())
-        con.commit()
-
-
 class AccessLogDB:
     """Kapselt alle Datenbankoperationen für die Access-Logs."""
 
@@ -64,6 +44,29 @@ class AccessLogDB:
         is_bot, is_admin_tech, is_content, utm_source, utm_medium, utm_campaign
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
+
+    # ---------------------------------------------------------
+    # Statische Helferfunktionen
+    # ---------------------------------------------------------
+    @staticmethod
+    def get_DataFrame(query: str, params=None, db_file: str = DB_FILE) -> pd.DataFrame:
+        """Lädt eine Abfrage als DataFrame aus der Datenbank."""
+        with sqlite3.connect(db_file) as con:
+            df = pd.read_sql_query(query, con, params=params)
+        return df
+
+    @staticmethod
+    def load_access_logs(db_file: str = DB_FILE) -> pd.DataFrame:
+        """Lädt sämtliche Zeilen der Tabelle ``access_log`` als DataFrame."""
+        return AccessLogDB.get_DataFrame("SELECT * FROM access_log", db_file=db_file)
+
+    @staticmethod
+    def execute(query: str, params=None, db_file: str = DB_FILE) -> None:
+        """Führt eine Änderungsabfrage (INSERT/UPDATE/DELETE) aus."""
+        with sqlite3.connect(db_file) as con:
+            cur = con.cursor()
+            cur.execute(query, params or ())
+            con.commit()
 
     def __init__(self, db_file: str = DB_FILE):
         self.db_file = db_file

@@ -23,6 +23,7 @@ und anschließend über ein Flask-Dashboard ausgewertet.
 3. `.env.example` nach `.env` kopieren und die SFTP-Zugangsdaten sowie `DB_FILE` anpassen.
 4. Die GeoLite2 City-Datenbank von [MaxMind](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data)
    herunterladen und unter `geo/GeoLite2-City.mmdb` ablegen.
+5. Die Datei `bot_user_agents.txt` enthält Erkennungsmerkmale bekannter Bots und kann bei Bedarf angepasst werden.
 
 ## Verwendung
 

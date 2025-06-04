@@ -8,6 +8,8 @@ from urllib.parse import urlparse, parse_qs
 import argparse
 import logging
 
+from bot_utils import is_bot
+
 import paramiko
 from db_utils import AccessLogDB
 from utils import load_env
@@ -15,7 +17,9 @@ from filters import IGNORED_PATH_PREFIXES
 
 load_env()
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -49,8 +53,7 @@ def get_config() -> ETLConfig:
         sftp=sftp,
         local_dir=os.environ.get("LOCAL_DIR", "./logs"),
         mode=os.environ.get("MODE", "bulk"),
-        force_reload=os.environ.get("FORCE_RELOAD", "False").lower()
-        == "true",
+        force_reload=os.environ.get("FORCE_RELOAD", "False").lower() == "true",
         db_file=os.environ.get("DB_FILE", "accesslog.db"),
         logfile_pattern=os.environ.get(
             "LOGFILE_PATTERN", r"access\.log\.\d+(\.\d+)?(\.gz)?$"
@@ -77,92 +80,13 @@ def parse_args():
     )
     return parser.parse_args()
 
+
 # Vorab kompilierte Pattern für Logzeilen und Bot-Erkennung
 LOG_PATTERN = re.compile(
     r"(?P<ip>\S+) \S+ \S+ \[(?P<time>.+?)\] \"(?P<method>\S+) (?P<url>\S+)(?: \S+)?\" (?P<status>\d{3}) (?P<size>\S+) (?P<vhost>\S+) \"(?P<referrer>.*?)\" \"(?P<user_agent>.*?)\" \"(?P<last>.*?)\""
 )
 
-# Liste der bekannten Bots ohne Duplikate
-BOT_USER_AGENTS = sorted(
-    {
-        "googlebot",
-        "bingbot",
-        "slurp",
-        "duckduckbot",
-        "baiduspider",
-        "yandexbot",
-        "facebot",
-        "ia_archiver",
-        "sogou",
-        "exabot",
-        "semrushbot",
-        "ahrefsbot",
-        "mj12bot",
-        "serpstatbot",
-        "seznambot",
-        "coccocbot",
-        "applebot",
-        "petalbot",
-        "twitterbot",
-        "linkedinbot",
-        "rogerbot",
-        "megaindex",
-        "siteauditbot",
-        "uptimerobot",
-        "jetpack",
-        "wordpress",
-        "monitor",
-        "python-requests",
-        "feedparser",
-        "uptime",
-        "facebookexternalhit",
-        "slackbot",
-        "telegrambot",
-        "wget",
-        "curl",
-        "ecosia",
-        "screaming frog",
-        "sitebulb",
-        "datadome",
-        "archive.org_bot",
-        "libwww-perl",
-        "python-urllib",
-        "python-httplib2",
-        "360spider",
-        "searchmetricsbot",
-        "mail.ru",
-        "bytespider",
-        "barkrowler",
-        "google-structured-data-testing-tool",
-        "bingpreview",
-        "zoominfobot",
-        "adsbot",
-        "spbot",
-        "webmeupbot",
-        "openlinkprofiler",
-        "semrushsiteaudit",
-        "daum",
-        "ccbot",
-        "qwantify",
-        "embedly",
-        "mastodon",
-        "bot",
-        "crawl",
-        "spider",
-        "ahrefs",
-        "semrush",
-        "duckduck",
-        "dataprovider",
-        "dnsscanner",
-        "flipboardproxy",
-        "trendictionbot",
-        "censysinspect",
-        "livelapbot",
-        "fake",
-    }
-)
-
-BOT_PATTERN = re.compile("|".join(re.escape(k) for k in BOT_USER_AGENTS), re.I)
+# Bot-Erkennung ueber externe Liste
 
 
 def clear_local_dir(local_dir):
@@ -229,9 +153,7 @@ def sftp_download_logs(config: ETLConfig):
             out_path = os.path.join(local_dir, fname[:-3])
             if not os.path.exists(out_path):
                 logger.info(f"Entpacke: {gz_path} -> {out_path}")
-                with gzip.open(gz_path, "rb") as f_in, open(
-                    out_path, "wb"
-                ) as f_out:
+                with gzip.open(gz_path, "rb") as f_in, open(out_path, "wb") as f_out:
                     shutil.copyfileobj(f_in, f_out)
             else:
                 logger.info(f"{out_path} existiert bereits lokal, wird übersprungen.")
@@ -248,11 +170,6 @@ def sftp_download_logs(config: ETLConfig):
 
 
 # --- Duplikat-Erkennung & DB-Initialisierung ---
-
-
-def is_bot(user_agent):
-    """Prüft, ob der User-Agent auf einen Bot hinweist."""
-    return bool(BOT_PATTERN.search((user_agent or "").lower()))
 
 
 def is_admin_tech(path):
@@ -346,4 +263,3 @@ if __name__ == "__main__":
     if args.mode:
         config.mode = args.mode
     main(config)
-

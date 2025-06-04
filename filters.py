@@ -1,12 +1,13 @@
-IGNORED_PATHS = [
-    "/wp-includes/",
-    "/wp-content/",
-    "/wp-json/",
+IGNORED_PATH_PREFIXES = (
+    "/wp-includes",
+    "/wp-content",
+    "/wp-json",
     "/xmlrpc.php",
     "/wp-admin",
     "/wp-login.php",
     "/wp-cron.php",
-]
+    "/robots.txt",
+)
 IGNORED_REFERRERS = [
     "leichtgesagt.blog",
     "leicht-gesagt.blog",
@@ -17,8 +18,7 @@ IGNORED_REFERRERS = [
 
 def filter_content_paths(df):
     """Filtert technische Pfade aus dem DataFrame."""
-    prefixes = tuple(IGNORED_PATHS)
-    return df[~df["path"].str.startswith(prefixes)]
+    return df[~df["path"].str.startswith(IGNORED_PATH_PREFIXES)]
 
 
 def filter_referrers(df):

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row dashboard-card">
+    <div class="col"><div class="card border-info"><div class="card-body">
+      <h5 class="card-title">Zugriffe (gesamt)</h5>
+      <p class="card-text fs-4">{{ overview['total'] }}</p>
+    </div></div></div>
+    <div class="col"><div class="card border-success"><div class="card-body">
+      <h5 class="card-title">Echte Nutzer</h5>
+      <p class="card-text fs-4">{{ overview['real_users'] }}</p>
+    </div></div></div>
+    <div class="col"><div class="card border-primary"><div class="card-body">
+      <h5 class="card-title">Eindeutige Nutzer</h5>
+      <p class="card-text fs-4">{{ overview['unique_users'] }}</p>
+    </div></div></div>
+    <div class="col"><div class="card border-warning"><div class="card-body">
+      <h5 class="card-title">Bots</h5>
+      <p class="card-text fs-4">{{ overview['bots'] }}</p>
+    </div></div></div>
+    <div class="col"><div class="card border-danger"><div class="card-body">
+      <h5 class="card-title">Fehler (4xx/5xx)</h5>
+      <p class="card-text fs-4">{{ overview['errors'] }}</p>
+    </div></div></div>
+    <div class="col"><div class="card border-secondary"><div class="card-body">
+      <h5 class="card-title">Häufigste Stunde</h5>
+      <p class="card-text fs-4">
+        {{ overview['peak_hour'] }} Uhr
+      </p>
+    </div></div></div>
+</div>
+<div class="row mb-4">
+  <!-- Linke Spalte: Traffic pro Stunde + Top-Referrer -->
+  <div class="col-md-6">
+    <h4>Traffic pro Stunde</h4>
+    <div class="col-md-12">
+      {{ hourly_chart|safe }}
+    </div>
+
+    <h4>Top-Referrer</h4>
+    <table class="table table-sm table-striped">
+      <thead><tr><th>Referrer</th><th>Hits</th></tr></thead>
+      <tbody>
+        {% for row in top_referrers %}
+          <tr>
+            <td>{{ row.referrer }}</td>
+            <td>{{ row.hits }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Rechte Spalte: Top-Content, dann Top-City, dann Top-Bots -->
+  <div class="col-md-6">
+    <h4>Top-Content-Seiten</h4>
+    <table class="table table-sm table-striped">
+      <thead><tr><th>Seite</th><th>Hits</th></tr></thead>
+      <tbody>
+        {% for row in top_pages %}
+          <tr>
+            <td>{{ row.path }}</td>
+            <td>{{ row.hits }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h4>Top-Länder/Städte (Content-Seiten)</h4>
+    <table class="table table-sm table-striped">
+      <thead>
+        <tr><th>Land</th><th>Stadt</th><th>Hits</th></tr>
+      </thead>
+      <tbody>
+        {% for row in top_content_geo %}
+          <tr>
+            <td>{{ row.country }}</td>
+            <td>{{ row.city }}</td>
+            <td>{{ row.hits }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h4>Top-Bots (User-Agent)</h4>
+    <table class="table table-sm table-striped">
+      <thead><tr><th>Bot</th><th>Hits</th></tr></thead>
+      <tbody>
+        {% for row in top_bots %}
+          <tr>
+            <td>{{ row.user_agent }}</td>
+            <td>{{ row.hits }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

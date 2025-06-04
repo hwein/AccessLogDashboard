@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mb-4">
+  <h4>Hinweise & Empfehlungen</h4>
+  <ul>
+  {% for rec in recommendations %}
+    <li>{{ rec|safe }}</li>
+  {% endfor %}
+  </ul>
+</div>
+<div class="mb-4">
+  <h4>Traffic nach Wochentag</h4>
+  {{ weekday_chart|safe }}
+</div>
+{% endblock %}

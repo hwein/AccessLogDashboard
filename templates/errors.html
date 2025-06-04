@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mb-4">
+  <h4>Gesamtverteilung Fehlercodes</h4>
+  {{ err_chart|safe }}
+</div>
+<div class="mb-4">
+  <h4>Auffällige Seitenaufrufe (Top 20)</h4>
+  <table class="table table-sm table-striped">
+    <thead><tr><th>Status</th><th>Pfad</th><th>Hits</th></tr></thead>
+    <tbody>
+      {% for row in err_detail %}
+        <tr>
+          <td>{{ row.status }}</td>
+          <td>{{ row.path }}</td>
+          <td>{{ row.hits }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="mb-4">
+  <h4>Top 10 Fehler-IPs</h4>
+  <table class="table table-sm table-striped">
+    <thead>
+      <tr><th>IP-Adresse</th><th>Land</th><th>Anzahl Fehler</th></tr>
+    </thead>
+    <tbody>
+      {% for row in top_error_ips %}
+        <tr>
+          <td>{{ row.ip }}</td>
+          <td>{{ row.country }}</td>
+          <td>{{ row.hits }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

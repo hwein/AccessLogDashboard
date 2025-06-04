@@ -1,9 +1,11 @@
 import geoip2.database
 
+
 class GeoIPLookup:
     _instance = None
     """Singleton wrapper for GeoIP city lookups."""
-    def __new__(cls, db_path='./GeoLite2-City.mmdb'):
+
+    def __new__(cls, db_path="./GeoLite2-City.mmdb"):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance.reader = geoip2.database.Reader(db_path)

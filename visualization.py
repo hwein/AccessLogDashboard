@@ -1,6 +1,7 @@
 import plotly.graph_objs as go
 import plotly.io as pio
 
+
 def to_plotly_figure(x, y, xlabel, ylabel, title, kind="bar"):
     """
     Erzeugt ein Plotly-Chart (als HTML-Snippet) für das Dashboard.
@@ -10,7 +11,7 @@ def to_plotly_figure(x, y, xlabel, ylabel, title, kind="bar"):
     if kind == "bar":
         fig.add_trace(go.Bar(x=x, y=y))
     elif kind == "line":
-        fig.add_trace(go.Scatter(x=x, y=y, mode='lines+markers'))
+        fig.add_trace(go.Scatter(x=x, y=y, mode="lines+markers"))
     elif kind == "pie":
         fig = go.Figure(go.Pie(labels=x, values=y))
     else:
@@ -20,6 +21,6 @@ def to_plotly_figure(x, y, xlabel, ylabel, title, kind="bar"):
         xaxis_title=xlabel,
         yaxis_title=ylabel,
         title=title,
-        template="simple_white"
+        template="simple_white",
     )
     return pio.to_html(fig, full_html=False)

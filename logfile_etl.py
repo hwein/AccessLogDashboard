@@ -11,23 +11,26 @@ from utils import load_env
 
 load_env()
 
+
 def get_config():
     """Return configuration loaded from environment variables."""
     return {
-        'sftp': {
-            'host': os.environ.get('SFTP_HOST', 'xxxxxx'),
-            'port': int(os.environ.get('SFTP_PORT', 22)),
-            'user': os.environ.get('SFTP_USER', 'xxxxxx'),
-            'password': os.environ.get('SFTP_PASSWORD', 'xxxxxx'),
+        "sftp": {
+            "host": os.environ.get("SFTP_HOST", "xxxxxx"),
+            "port": int(os.environ.get("SFTP_PORT", 22)),
+            "user": os.environ.get("SFTP_USER", "xxxxxx"),
+            "password": os.environ.get("SFTP_PASSWORD", "xxxxxx"),
         },
-        'local_dir': os.environ.get('LOCAL_DIR', './logs'),
-        'mode': os.environ.get('MODE', 'bulk'),
-        'force_reload': os.environ.get('FORCE_RELOAD', 'False').lower() == 'true',
-        'db_file': os.environ.get('DB_FILE', 'accesslog.db'),
-        'logfile_pattern': os.environ.get(
-            'LOGFILE_PATTERN', r'access\.log\.\d+(\.\d+)?(\.gz)?$'
+        "local_dir": os.environ.get("LOCAL_DIR", "./logs"),
+        "mode": os.environ.get("MODE", "bulk"),
+        "force_reload": os.environ.get("FORCE_RELOAD", "False").lower()
+        == "true",
+        "db_file": os.environ.get("DB_FILE", "accesslog.db"),
+        "logfile_pattern": os.environ.get(
+            "LOGFILE_PATTERN", r"access\.log\.\d+(\.\d+)?(\.gz)?$"
         ),
     }
+
 
 CONFIG = get_config()
 
@@ -122,8 +125,10 @@ BOT_PATTERN = re.compile(
     re.I,
 )
 
+
 def log(msg):
     print(f"[LOG] {msg}")
+
 
 def clear_local_dir(local_dir):
     """Löscht alle Dateien im lokalen Download-Ordner."""
@@ -139,27 +144,30 @@ def clear_local_dir(local_dir):
 
 # --- SFTP Download Funktion ---
 def sftp_download_logs(config):
-    sftp_cfg = config['sftp']
-    local_dir = config['local_dir']
-    logfile_pattern = re.compile(config['logfile_pattern'])
+    sftp_cfg = config["sftp"]
+    local_dir = config["local_dir"]
+    logfile_pattern = re.compile(config["logfile_pattern"])
     os.makedirs(local_dir, exist_ok=True)
-    clear_local_dir(local_dir) 
+    clear_local_dir(local_dir)
     log("Verbinde mit SFTP-Server ...")
-    client = paramiko.Transport((sftp_cfg['host'], sftp_cfg['port']))
+    client = paramiko.Transport((sftp_cfg["host"], sftp_cfg["port"]))
     try:
-        client.connect(username=sftp_cfg['user'], password=sftp_cfg['password'])
+        client.connect(
+            username=sftp_cfg["user"], password=sftp_cfg["password"]
+        )
         sftp = paramiko.SFTPClient.from_transport(client)
-        files = sftp.listdir('.')
+        files = sftp.listdir(".")
         log(f"Gefundene Dateien auf SFTP: {files}")
 
         # Dateifilter: access.log.*, KEINE .gz, KEIN traffic.db, sftp.log, access.log.current
         logfiles = [
-            f for f in files
+            f
+            for f in files
             if logfile_pattern.match(f)
             and f not in {"traffic.db", "sftp.log", "access.log.current"}
         ]
         log(f"Logfiles nach Pattern-Match: {logfiles}")
-        if config['mode'] == 'daily':
+        if config["mode"] == "daily":
             mtimes = [(f, sftp.stat(f).st_mtime) for f in logfiles]
             if mtimes:
                 mtimes.sort(key=lambda x: x[1], reverse=True)
@@ -183,28 +191,36 @@ def sftp_download_logs(config):
             client.close()
     # GZ entpacken falls nötig
     for fname in logfiles:
-        if fname.endswith('.gz'):
+        if fname.endswith(".gz"):
             gz_path = os.path.join(local_dir, fname)
             out_path = os.path.join(local_dir, fname[:-3])
             if not os.path.exists(out_path):
                 log(f"Entpacke: {gz_path} -> {out_path}")
-                with gzip.open(gz_path, 'rb') as f_in, open(out_path, 'wb') as f_out:
+                with gzip.open(gz_path, "rb") as f_in, open(
+                    out_path, "wb"
+                ) as f_out:
                     shutil.copyfileobj(f_in, f_out)
             else:
                 log(f"{out_path} existiert bereits lokal, wird übersprungen.")
     # Gib alle Log-Dateien (entpackt, falls nötig) zurück
-    all_files = [f for f in os.listdir(local_dir)
-                 if logfile_pattern.match(f)
-                 and f != "access.log.current"
-                 and not f.endswith('.gz')]
+    all_files = [
+        f
+        for f in os.listdir(local_dir)
+        if logfile_pattern.match(f)
+        and f != "access.log.current"
+        and not f.endswith(".gz")
+    ]
     log(f"Dateien für Import: {all_files}")
     return [os.path.join(local_dir, f) for f in all_files]
 
+
 # --- Duplikat-Erkennung & DB-Initialisierung ---
+
 
 def is_bot(user_agent):
     """Prüft, ob der User-Agent auf einen Bot hinweist."""
     return bool(BOT_PATTERN.search((user_agent or "").lower()))
+
 
 def is_admin_tech(path):
     """True, wenn der Pfad zu administrativen WordPress-Bereichen gehört."""
@@ -220,14 +236,16 @@ def is_admin_tech(path):
     )
     return path.startswith(admin_patterns)
 
+
 def extract_utm(referrer):
     utm_source = utm_medium = utm_campaign = None
-    if referrer and referrer != '-':
+    if referrer and referrer != "-":
         params = parse_qs(urlparse(referrer).query)
-        utm_source = params.get('utm_source', [None])[0]
-        utm_medium = params.get('utm_medium', [None])[0]
-        utm_campaign = params.get('utm_campaign', [None])[0]
+        utm_source = params.get("utm_source", [None])[0]
+        utm_medium = params.get("utm_medium", [None])[0]
+        utm_campaign = params.get("utm_campaign", [None])[0]
     return utm_source, utm_medium, utm_campaign
+
 
 def process_logfile(filepath):
     log(f"Starte Verarbeitung von {filepath} ...")
@@ -240,44 +258,62 @@ def process_logfile(filepath):
             if not m:
                 continue
             d = m.groupdict()
-            ts = datetime.strptime(d['time'].split()[0], '%d/%b/%Y:%H:%M:%S')
-            d['timestamp'] = ts.isoformat()
-            d['path'] = urlparse(d['url']).path
-            d['query'] = urlparse(d['url']).query
-            d['is_bot'] = is_bot(d['user_agent'])
-            d['is_admin_tech'] = is_admin_tech(d['path'])
-            d['is_content'] = not d['is_admin_tech']
-            utm_source, utm_medium, utm_campaign = extract_utm(d['referrer'])
-            d['utm_source'] = utm_source
-            d['utm_medium'] = utm_medium
-            d['utm_campaign'] = utm_campaign
+            ts = datetime.strptime(d["time"].split()[0], "%d/%b/%Y:%H:%M:%S")
+            d["timestamp"] = ts.isoformat()
+            d["path"] = urlparse(d["url"]).path
+            d["query"] = urlparse(d["url"]).query
+            d["is_bot"] = is_bot(d["user_agent"])
+            d["is_admin_tech"] = is_admin_tech(d["path"])
+            d["is_content"] = not d["is_admin_tech"]
+            utm_source, utm_medium, utm_campaign = extract_utm(d["referrer"])
+            d["utm_source"] = utm_source
+            d["utm_medium"] = utm_medium
+            d["utm_campaign"] = utm_campaign
             # vhost wird nicht gebraucht, deshalb hier ignoriert!
-            records.append([
-                d['timestamp'], d['ip'], d['method'], d['path'], d['query'],
-                d['status'], d['size'], d['referrer'], d['user_agent'],
-                d['is_bot'], d['is_admin_tech'], d['is_content'],
-                d['utm_source'], d['utm_medium'], d['utm_campaign']
-            ])
-    log(f"{len(records)} von {total_lines} Zeilen in {filepath} erfolgreich geparst.")
+            records.append(
+                [
+                    d["timestamp"],
+                    d["ip"],
+                    d["method"],
+                    d["path"],
+                    d["query"],
+                    d["status"],
+                    d["size"],
+                    d["referrer"],
+                    d["user_agent"],
+                    d["is_bot"],
+                    d["is_admin_tech"],
+                    d["is_content"],
+                    d["utm_source"],
+                    d["utm_medium"],
+                    d["utm_campaign"],
+                ]
+            )
+    log(
+        f"{len(records)} von {total_lines} Zeilen in {filepath} erfolgreich geparst."
+    )
     return records
 
 
 def main(config=CONFIG):
     files = sftp_download_logs(config)
     total_imported = 0
-    with AccessLogDB(config['db_file']) as db:
-        db.init_db(config['force_reload'])
+    with AccessLogDB(config["db_file"]) as db:
+        db.init_db(config["force_reload"])
         for f in files:
             log(f"Verarbeite: {f}")
             data = process_logfile(f)
             imported = db.insert_logs(data)
             skipped = len(data) - imported
             log(f"{imported} neue Zeilen aus {f} importiert.")
-            log(f"{skipped} Zeilen aus {f} waren Duplikate und wurden übersprungen.")
+            log(
+                f"{skipped} Zeilen aus {f} waren Duplikate und wurden übersprungen."
+            )
             total_imported += imported
     log(
         f"Import abgeschlossen. Insgesamt {total_imported} Zeilen verarbeitet (nur neue gespeichert)."
     )
+
 
 if __name__ == "__main__":
     main()

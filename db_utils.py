@@ -20,6 +20,11 @@ def get_df(query: str, params=None, db_file: str = DB_FILE) -> pd.DataFrame:
     return df
 
 
+def load_access_logs() -> pd.DataFrame:
+    """Lädt sämtliche Zeilen der Tabelle ``access_log`` als DataFrame."""
+    return get_df("SELECT * FROM access_log")
+
+
 def execute(query: str, params=None, db_file: str = DB_FILE) -> None:
     """Führt eine Änderungsabfrage (INSERT/UPDATE/DELETE) aus."""
     with sqlite3.connect(db_file) as con:

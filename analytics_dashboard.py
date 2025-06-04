@@ -1,7 +1,7 @@
 import pandas as pd
 from flask import Flask, request, redirect, url_for
 from collections import Counter
-from db_utils import get_df
+from db_utils import load_access_logs
 from geo_utils import GeoIPLookup
 from visualization import to_plotly_figure
 from filters import filter_content_paths, filter_referrers, apply_date_filter
@@ -13,7 +13,7 @@ geoip = GeoIPLookup('./geo/GeoLite2-City.mmdb')
 #--- Hilfsfunktion (zentral, überall identisch) ---
 def get_df_filtered():
     from_date, to_date = get_date_params()
-    df_all = get_df("SELECT * FROM access_log")
+    df_all = load_access_logs()
     df_all = apply_date_filter(df_all, from_date, to_date)
     # Flags sauber casten
     if 'is_bot' in df_all:

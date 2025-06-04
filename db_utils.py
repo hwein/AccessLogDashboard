@@ -6,20 +6,7 @@ from typing import Iterable, Tuple
 
 import pandas as pd
 
-
-def load_env(path: str = ".env") -> None:
-    """Load key=value pairs from a .env file into os.environ."""
-    if not os.path.exists(path):
-        return
-    with open(path) as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            if "=" in line:
-                key, value = line.split("=", 1)
-                os.environ.setdefault(key, value)
-
+from utils import load_env
 
 load_env()
 

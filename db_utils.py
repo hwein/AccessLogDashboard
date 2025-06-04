@@ -98,11 +98,10 @@ class AccessLogDB:
         """Erzeugt die Datenbanktabelle und löscht sie optional vorher."""
         if force_reload:
             self._cur.execute("DROP TABLE IF EXISTS access_log")
-        self._cur.execute(self.TABLE_SQL)
-        if force_reload:
+            self._cur.execute(self.TABLE_SQL)
             for stmt in self.INDEX_SQLS:
                 self._cur.execute(stmt)
-        self._con.commit()
+            self._con.commit()
 
     def insert_logs(self, records: Iterable[Tuple]) -> int:
         """Fügt mehrere Logeinträge ein und gibt die Anzahl neuer Zeilen zurück."""
@@ -110,11 +109,11 @@ class AccessLogDB:
         if not records:
             return 0
         before = self._cur.execute(
-            "SELECT COUNT(*) FROM access_log"
+            "SELECT COUNT(id) FROM access_log"
         ).fetchone()[0]
         self._cur.executemany(self.INSERT_SQL, records)
         self._con.commit()
         after = self._cur.execute(
-            "SELECT COUNT(*) FROM access_log"
+            "SELECT COUNT(id) FROM access_log"
         ).fetchone()[0]
         return after - before

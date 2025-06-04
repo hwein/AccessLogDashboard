@@ -5,6 +5,7 @@ import shutil
 from datetime import datetime
 from urllib.parse import urlparse, parse_qs
 import argparse
+import logging
 
 import paramiko
 from db_utils import AccessLogDB
@@ -12,6 +13,9 @@ from utils import load_env
 from filters import IGNORED_PATH_PREFIXES
 
 load_env()
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger(__name__)
 
 
 def get_config():
@@ -141,10 +145,6 @@ BOT_USER_AGENTS = sorted(
 BOT_PATTERN = re.compile("|".join(re.escape(k) for k in BOT_USER_AGENTS), re.I)
 
 
-def log(msg):
-    print(f"[LOG] {msg}")
-
-
 def clear_local_dir(local_dir):
     """Löscht alle Dateien im lokalen Download-Ordner."""
     for f in os.listdir(local_dir):
@@ -152,9 +152,9 @@ def clear_local_dir(local_dir):
         try:
             if os.path.isfile(file_path):
                 os.unlink(file_path)
-                log(f"Lösche lokale Datei: {file_path}")
+                logger.info(f"Lösche lokale Datei: {file_path}")
         except Exception as e:
-            log(f"Fehler beim Löschen von {file_path}: {e}")
+            logger.error(f"Fehler beim Löschen von {file_path}: {e}")
 
 
 # --- SFTP Download Funktion ---
@@ -164,7 +164,7 @@ def sftp_download_logs(config):
     logfile_pattern = re.compile(config["logfile_pattern"])
     os.makedirs(local_dir, exist_ok=True)
     clear_local_dir(local_dir)
-    log("Verbinde mit SFTP-Server ...")
+    logger.info("Verbinde mit SFTP-Server ...")
     client = paramiko.Transport((sftp_cfg["host"], sftp_cfg["port"]))
     try:
         client.connect(
@@ -172,7 +172,7 @@ def sftp_download_logs(config):
         )
         sftp = paramiko.SFTPClient.from_transport(client)
         files = sftp.listdir(".")
-        log(f"Gefundene Dateien auf SFTP: {files}")
+        logger.info(f"Gefundene Dateien auf SFTP: {files}")
 
         # Dateifilter: access.log.*, KEINE .gz, KEIN traffic.db, sftp.log, access.log.current
         logfiles = [
@@ -181,24 +181,24 @@ def sftp_download_logs(config):
             if logfile_pattern.match(f)
             and f not in {"traffic.db", "sftp.log", "access.log.current"}
         ]
-        log(f"Logfiles nach Pattern-Match: {logfiles}")
+        logger.info(f"Logfiles nach Pattern-Match: {logfiles}")
         if config["mode"] == "daily":
             mtimes = [(f, sftp.stat(f).st_mtime) for f in logfiles]
             if mtimes:
                 mtimes.sort(key=lambda x: x[1], reverse=True)
                 logfiles = [mtimes[0][0]]
-                log(f"Daily Mode: Verarbeite nur Datei: {logfiles[0]}")
+                logger.info(f"Daily Mode: Verarbeite nur Datei: {logfiles[0]}")
             else:
-                log("Daily Mode: Keine passenden Logfiles gefunden!")
+                logger.info("Daily Mode: Keine passenden Logfiles gefunden!")
                 logfiles = []
         for fname in logfiles:
             remote = fname
             local = os.path.join(local_dir, fname)
             if not os.path.exists(local):
-                log(f"Lade {fname} ...")
+                logger.info(f"Lade {fname} ...")
                 sftp.get(remote, local)
             else:
-                log(f"{fname} existiert bereits lokal, wird übersprungen.")
+                logger.info(f"{fname} existiert bereits lokal, wird übersprungen.")
     finally:
         try:
             sftp.close()
@@ -210,13 +210,13 @@ def sftp_download_logs(config):
             gz_path = os.path.join(local_dir, fname)
             out_path = os.path.join(local_dir, fname[:-3])
             if not os.path.exists(out_path):
-                log(f"Entpacke: {gz_path} -> {out_path}")
+                logger.info(f"Entpacke: {gz_path} -> {out_path}")
                 with gzip.open(gz_path, "rb") as f_in, open(
                     out_path, "wb"
                 ) as f_out:
                     shutil.copyfileobj(f_in, f_out)
             else:
-                log(f"{out_path} existiert bereits lokal, wird übersprungen.")
+                logger.info(f"{out_path} existiert bereits lokal, wird übersprungen.")
     # Gib alle Log-Dateien (entpackt, falls nötig) zurück
     all_files = [
         f
@@ -225,7 +225,7 @@ def sftp_download_logs(config):
         and f != "access.log.current"
         and not f.endswith(".gz")
     ]
-    log(f"Dateien für Import: {all_files}")
+    logger.info(f"Dateien für Import: {all_files}")
     return [os.path.join(local_dir, f) for f in all_files]
 
 
@@ -253,7 +253,7 @@ def extract_utm(referrer):
 
 
 def process_logfile(filepath):
-    log(f"Starte Verarbeitung von {filepath} ...")
+    logger.info(f"Starte Verarbeitung von {filepath} ...")
     records = []
     total_lines = 0
     with open(filepath, "r", encoding="utf-8") as f:
@@ -294,7 +294,7 @@ def process_logfile(filepath):
                     d["utm_campaign"],
                 ]
             )
-    log(
+    logger.info(
         f"{len(records)} von {total_lines} Zeilen in {filepath} erfolgreich geparst."
     )
     return records
@@ -306,16 +306,16 @@ def main(config=CONFIG):
     with AccessLogDB(config["db_file"]) as db:
         db.init_db(config["force_reload"])
         for f in files:
-            log(f"Verarbeite: {f}")
+            logger.info(f"Verarbeite: {f}")
             data = process_logfile(f)
             imported = db.insert_logs(data)
             skipped = len(data) - imported
-            log(f"{imported} neue Zeilen aus {f} importiert.")
-            log(
+            logger.info(f"{imported} neue Zeilen aus {f} importiert.")
+            logger.info(
                 f"{skipped} Zeilen aus {f} waren Duplikate und wurden übersprungen."
             )
             total_imported += imported
-    log(
+    logger.info(
         f"Import abgeschlossen. Insgesamt {total_imported} Zeilen verarbeitet (nur neue gespeichert)."
     )
 

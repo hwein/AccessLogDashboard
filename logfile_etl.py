@@ -1,11 +1,12 @@
-import re
 import os
+import re
 import gzip
 import shutil
 import sqlite3
-import pandas as pd
-from urllib.parse import urlparse, parse_qs
 from datetime import datetime
+from urllib.parse import urlparse, parse_qs
+
+import pandas as pd
 import paramiko
 
 def load_env(path=".env"):
@@ -43,6 +44,97 @@ def get_config():
 
 CONFIG = get_config()
 
+# Vorab kompilierte Pattern für Logzeilen und Bot-Erkennung
+LOG_PATTERN = re.compile(
+    r"(?P<ip>\S+) \S+ \S+ \[(?P<time>.+?)\] \"(?P<method>\S+) (?P<url>\S+)(?: \S+)?\" (?P<status>\d{3}) (?P<size>\S+) (?P<vhost>\S+) \"(?P<referrer>.*?)\" \"(?P<user_agent>.*?)\" \"(?P<last>.*?)\""
+)
+
+BOT_PATTERN = re.compile(
+    "|".join(
+        re.escape(k)
+        for k in {
+            "googlebot",
+            "bingbot",
+            "slurp",
+            "duckduckbot",
+            "baiduspider",
+            "yandexbot",
+            "facebot",
+            "ia_archiver",
+            "sogou",
+            "exabot",
+            "semrushbot",
+            "ahrefsbot",
+            "mj12bot",
+            "serpstatbot",
+            "seznambot",
+            "coccocbot",
+            "applebot",
+            "petalbot",
+            "twitterbot",
+            "linkedinbot",
+            "rogerbot",
+            "megaindex",
+            "siteauditbot",
+            "uptimerobot",
+            "jetpack",
+            "wordpress",
+            "monitor",
+            "python-requests",
+            "feedparser",
+            "uptime",
+            "facebookexternalhit",
+            "slackbot",
+            "telegrambot",
+            "wget",
+            "curl",
+            "ecosia",
+            "screaming frog",
+            "sitebulb",
+            "datadome",
+            "archive.org_bot",
+            "libwww-perl",
+            "python-urllib",
+            "python-httplib2",
+            "360spider",
+            "searchmetricsbot",
+            "mail.ru",
+            "bytespider",
+            "barkrowler",
+            "google-structured-data-testing-tool",
+            "bingpreview",
+            "zoominfobot",
+            "adsbot",
+            "spbot",
+            "webmeupbot",
+            "openlinkprofiler",
+            "semrushsiteaudit",
+            "daum",
+            "ccbot",
+            "qwantify",
+            "embedly",
+            "mastodon",
+            "bot",
+            "crawl",
+            "spider",
+            "ahrefs",
+            "semrush",
+            "duckduck",
+            "dataprovider",
+            "adsbot",
+            "mj12bot",
+            "dnsscanner",
+            "flipboardproxy",
+            "trendictionbot",
+            "360spider",
+            "censysinspect",
+            "livelapbot",
+            "fake",
+        }
+    ),
+    re.I,
+)
+
 def log(msg):
     print(f"[LOG] {msg}")
 
@@ -67,34 +159,41 @@ def sftp_download_logs(config):
     clear_local_dir(local_dir) 
     log("Verbinde mit SFTP-Server ...")
     client = paramiko.Transport((sftp_cfg['host'], sftp_cfg['port']))
-    client.connect(username=sftp_cfg['user'], password=sftp_cfg['password'])
-    sftp = paramiko.SFTPClient.from_transport(client)
-    files = sftp.listdir('.')
-    log(f"Gefundene Dateien auf SFTP: {files}")
-    # Dateifilter: access.log.*, KEINE .gz, KEIN traffic.db, sftp.log, access.log.current
-    logfiles = [f for f in files 
-                if logfile_pattern.match(f)
-                and f not in {"traffic.db", "sftp.log", "access.log.current"}]
-    log(f"Logfiles nach Pattern-Match: {logfiles}")
-    if config['mode'] == 'daily':
-        mtimes = [(f, sftp.stat(f).st_mtime) for f in logfiles]
-        if mtimes:
-            mtimes.sort(key=lambda x: x[1], reverse=True)
-            logfiles = [mtimes[0][0]]
-            log(f"Daily Mode: Verarbeite nur Datei: {logfiles[0]}")
-        else:
-            log("Daily Mode: Keine passenden Logfiles gefunden!")
-            logfiles = []
-    for fname in logfiles:
-        remote = fname
-        local = os.path.join(local_dir, fname)
-        if not os.path.exists(local):
-            log(f"Lade {fname} ...")
-            sftp.get(remote, local)
-        else:
-            log(f"{fname} existiert bereits lokal, wird übersprungen.")
-    sftp.close()
-    client.close()
+    try:
+        client.connect(username=sftp_cfg['user'], password=sftp_cfg['password'])
+        sftp = paramiko.SFTPClient.from_transport(client)
+        files = sftp.listdir('.')
+        log(f"Gefundene Dateien auf SFTP: {files}")
+
+        # Dateifilter: access.log.*, KEINE .gz, KEIN traffic.db, sftp.log, access.log.current
+        logfiles = [
+            f for f in files
+            if logfile_pattern.match(f)
+            and f not in {"traffic.db", "sftp.log", "access.log.current"}
+        ]
+        log(f"Logfiles nach Pattern-Match: {logfiles}")
+        if config['mode'] == 'daily':
+            mtimes = [(f, sftp.stat(f).st_mtime) for f in logfiles]
+            if mtimes:
+                mtimes.sort(key=lambda x: x[1], reverse=True)
+                logfiles = [mtimes[0][0]]
+                log(f"Daily Mode: Verarbeite nur Datei: {logfiles[0]}")
+            else:
+                log("Daily Mode: Keine passenden Logfiles gefunden!")
+                logfiles = []
+        for fname in logfiles:
+            remote = fname
+            local = os.path.join(local_dir, fname)
+            if not os.path.exists(local):
+                log(f"Lade {fname} ...")
+                sftp.get(remote, local)
+            else:
+                log(f"{fname} existiert bereits lokal, wird übersprungen.")
+    finally:
+        try:
+            sftp.close()
+        finally:
+            client.close()
     # GZ entpacken falls nötig
     for fname in logfiles:
         if fname.endswith('.gz'):
@@ -146,32 +245,22 @@ def init_db(config, force_reload=False):
     return con
 
 def is_bot(user_agent):
-    bot_keywords = [
-        "googlebot", "bingbot", "slurp", "duckduckbot", "baiduspider", "yandexbot", "facebot",
-        "ia_archiver", "sogou", "exabot", "semrushbot", "ahrefsbot", "mj12bot", "serpstatbot",
-        "seznambot", "coccocbot", "applebot", "petalbot", "twitterbot", "linkedinbot", "rogerbot",
-        "megaindex", "siteauditbot", "uptimerobot", "jetpack", "wordpress", "monitor", "python-requests",
-        "feedparser", "uptime", "facebookexternalhit", "slackbot", "telegrambot", "wget", "curl", "ecosia",
-        "screaming frog", "sitebulb", "datadome", "archive.org_bot", "libwww-perl", "python-urllib",
-        "python-httplib2", "360spider", "searchmetricsbot", "mail.ru", "bytespider", "barkrowler",
-        "google-structured-data-testing-tool", "bingpreview", "zoominfobot", "adsbot", "applebot",
-        "spbot", "webmeupbot", "openlinkprofiler", "semrushsiteaudit", "daum", "ccbot", "qwantify",
-        "embedly", "mastodon","bot", "crawl", "spider", "ahrefs", "jetpack", "wordpress", "monitor",
-        "python-requests", "feedparser", "uptime", "semrush", "baiduspider",
-        "bingpreview", "facebookexternalhit", "slackbot", "google", "duckduckbot",
-        "telegrambot", "yandex", "wget", "curl", "duckduck","ecosia","Dataprovider",
-        "AdsBot","MJ12bot","DNSScanner","FlipboardProxy","trendictionbot","360Spider","CensysInspect",
-        "MJ12bot","LivelapBot","fake"
-    ]
-
-    ua = (user_agent or "").lower()
-    return any(bk in ua for bk in bot_keywords)
+    """Prüft, ob der User-Agent auf einen Bot hinweist."""
+    return bool(BOT_PATTERN.search((user_agent or "").lower()))
 
 def is_admin_tech(path):
-    admin_patterns = [
-        "/wp-admin", "/wp-login.php", "/wp-json", "/wp-content", "/xmlrpc.php", "/wp-cron.php", "/wp-includes", "/robots.txt"
-    ]
-    return any(path.startswith(p) for p in admin_patterns)
+    """True, wenn der Pfad zu administrativen WordPress-Bereichen gehört."""
+    admin_patterns = (
+        "/wp-admin",
+        "/wp-login.php",
+        "/wp-json",
+        "/wp-content",
+        "/xmlrpc.php",
+        "/wp-cron.php",
+        "/wp-includes",
+        "/robots.txt",
+    )
+    return path.startswith(admin_patterns)
 
 def extract_utm(referrer):
     utm_source = utm_medium = utm_campaign = None
@@ -184,15 +273,12 @@ def extract_utm(referrer):
 
 def process_logfile(filepath):
     log(f"Starte Verarbeitung von {filepath} ...")
-    pattern = re.compile(
-        r'(?P<ip>\S+) \S+ \S+ \[(?P<time>.+?)\] "(?P<method>\S+) (?P<url>\S+)(?: \S+)?" (?P<status>\d{3}) (?P<size>\S+) (?P<vhost>\S+) "(?P<referrer>.*?)" "(?P<user_agent>.*?)" "(?P<last>.*?)"'
-    )
     records = []
     total_lines = 0
     with open(filepath, "r", encoding="utf-8") as f:
         for line in f:
             total_lines += 1
-            m = pattern.match(line)
+            m = LOG_PATTERN.match(line)
             if not m:
                 continue
             d = m.groupdict()

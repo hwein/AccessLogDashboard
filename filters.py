@@ -2,14 +2,15 @@ IGNORED_PATHS = ['/wp-includes/', '/wp-content/', '/wp-json/', '/xmlrpc.php', '/
 IGNORED_REFERRERS = ['leichtgesagt.blog', 'leicht-gesagt.blog', 'www.leichtgesagt.blog', 'www.leicht-gesagt.blog']
 
 def filter_content_paths(df):
-    for tech in IGNORED_PATHS:
-        df = df[~df['path'].str.startswith(tech)]
-    return df
+    """Filtert technische Pfade aus dem DataFrame."""
+    prefixes = tuple(IGNORED_PATHS)
+    return df[~df['path'].str.startswith(prefixes)]
 
 def filter_referrers(df):
-    for d in IGNORED_REFERRERS:
-        df = df[~df['referrer'].str.contains(d, na=False)]
-    return df
+    """Entfernt interne Referrer aus dem DataFrame."""
+    import re
+    pattern = "|".join(re.escape(r) for r in IGNORED_REFERRERS)
+    return df[~df['referrer'].str.contains(pattern, na=False)]
 
 def apply_date_filter(df, from_date, to_date):
     import pandas as pd

@@ -49,7 +49,9 @@ class AccessLogDB:
     # Statische Helferfunktionen
     # ---------------------------------------------------------
     @staticmethod
-    def get_DataFrame(query: str, params=None, db_file: str = DB_FILE) -> pd.DataFrame:
+    def get_dataframe(
+        query: str, params=None, db_file: str = DB_FILE
+    ) -> pd.DataFrame:
         """Lädt eine Abfrage als DataFrame aus der Datenbank."""
         with sqlite3.connect(db_file) as con:
             df = pd.read_sql_query(query, con, params=params)
@@ -58,8 +60,9 @@ class AccessLogDB:
     @staticmethod
     def load_access_logs(db_file: str = DB_FILE) -> pd.DataFrame:
         """Lädt sämtliche Zeilen der Tabelle ``access_log`` als DataFrame."""
-        return AccessLogDB.get_DataFrame("SELECT * FROM access_log", db_file=db_file)
-
+        return AccessLogDB.get_dataframe(
+            "SELECT * FROM access_log", db_file=db_file
+        )
 
     def __init__(self, db_file: str = DB_FILE):
         self.db_file = db_file
@@ -90,9 +93,12 @@ class AccessLogDB:
         records = list(records)
         if not records:
             return 0
-        before = self._cur.execute("SELECT COUNT(*) FROM access_log").fetchone()[0]
+        before = self._cur.execute(
+            "SELECT COUNT(*) FROM access_log"
+        ).fetchone()[0]
         self._cur.executemany(self.INSERT_SQL, records)
         self._con.commit()
-        after = self._cur.execute("SELECT COUNT(*) FROM access_log").fetchone()[0]
+        after = self._cur.execute(
+            "SELECT COUNT(*) FROM access_log"
+        ).fetchone()[0]
         return after - before
-

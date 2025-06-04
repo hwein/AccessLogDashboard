@@ -38,6 +38,19 @@ class AccessLogDB:
     )
     """
 
+    INDEX_SQLS = [
+        """CREATE UNIQUE INDEX IF NOT EXISTS access_log_id_uindex
+        ON access_log (id)""",
+        """CREATE INDEX IF NOT EXISTS access_log_is_admin_tech_index
+        ON access_log (is_admin_tech)""",
+        """CREATE INDEX IF NOT EXISTS access_log_is_bot_index
+        ON access_log (is_bot)""",
+        """CREATE INDEX IF NOT EXISTS access_log_is_content_index
+        ON access_log (is_content)""",
+        """CREATE INDEX IF NOT EXISTS access_log_timestamp_index
+        ON access_log (timestamp)""",
+    ]
+
     INSERT_SQL = """
     INSERT OR IGNORE INTO access_log (
         timestamp, ip, method, path, query, status, size, referrer, user_agent,
@@ -86,6 +99,9 @@ class AccessLogDB:
         if force_reload:
             self._cur.execute("DROP TABLE IF EXISTS access_log")
         self._cur.execute(self.TABLE_SQL)
+        if force_reload:
+            for stmt in self.INDEX_SQLS:
+                self._cur.execute(stmt)
         self._con.commit()
 
     def insert_logs(self, records: Iterable[Tuple]) -> int:
